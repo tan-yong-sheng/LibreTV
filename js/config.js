@@ -154,6 +154,38 @@ const API_SITES = {
         api: 'https://cj.yayazy.net/api.php/provide/vod/',
         name: '丫丫资源'
     },
+    zy360zz: {
+        api: 'https://360zyzz.com/api.php/provide/vod/',
+        name: '360资源站zz'
+    },
+    jinying: {
+        api: 'https://www.jinyingzy.com/api.php/provide/vod/',
+        name: '金鹰资源'
+    },
+    jinying2: {
+        api: 'https://jyzyapi.com/api.php/provide/vod/',
+        name: '金鹰资源备用'
+    },
+    mtzy: {
+        api: 'https://mtzy.me/api.php/provide/vod/',
+        name: '茅台资源站'
+    },
+    okzyw: {
+        api: 'https://okzyw.cc/api.php/provide/vod/',
+        name: 'OK资源网'
+    },
+    kuaichezy: {
+        api: 'http://kuaichezy.com/api.php/provide/vod/',
+        name: '快车资源'
+    },
+    ckzy1: {
+        api: 'http://www.ckzy1.com/api.php/provide/vod/',
+        name: 'CK资源'
+    },
+    zuidazy2: {
+        api: 'http://zuidazy.net/api.php/provide/vod/',
+        name: '最大资源备用'
+    },
     testSource: {
         api: 'https://www.example.com/api.php/provide/vod',
         name: '空内容测试源',
