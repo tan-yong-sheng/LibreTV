@@ -52,6 +52,14 @@ const API_SITES = {
         api: 'https://wolongzyw.com/api.php/provide/vod',
         name: '卧龙资源',
     },
+    wolong2: {
+        api: 'https://collect.wolongzy.cc/api.php/provide/vod',
+        name: '卧龙资源2',
+    },
+    ffzy2: {
+        api: 'https://cj.ffzyapi.com/api.php/provide/vod',
+        name: '非凡资源2',
+    },
     jisu: {
         api: 'https://jszyapi.com/api.php/provide/vod',
         name: '极速资源',
