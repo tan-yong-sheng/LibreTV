@@ -28,23 +28,6 @@ export async function onRequest(context) {
     const { request, env, next, waitUntil } = context; // next 和 waitUntil 可能需要
     const url = new URL(request.url);
 
-    // 验证鉴权（主函数调用）
-    const isValidAuth = await validateAuth(request, env);
-    if (!isValidAuth) {
-        return new Response(JSON.stringify({
-            success: false,
-            error: '代理访问未授权：请检查密码配置或鉴权参数'
-        }), { 
-            status: 401,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
-                'Access-Control-Allow-Headers': '*',
-                'Content-Type': 'application/json'
-            }
-        });
-    }
-
     // --- 从环境变量读取配置 ---
     const DEBUG_ENABLED = (env.DEBUG === 'true');
     const CACHE_TTL = parseInt(env.CACHE_TTL || '86400'); // 默认 24 小时
