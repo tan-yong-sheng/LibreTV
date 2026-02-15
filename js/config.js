@@ -118,6 +118,46 @@ const API_SITES = {
         api: 'https://www.fantuan.tv/api.php/provide/vod/',
         name: '饭团影视'
     },
+    apibdzy: {
+        api: 'https://api.apibdzy.com/api.php/provide/vod/',
+        name: '百度云资源'
+    },
+    wujin: {
+        api: 'https://api.wujinapi.com/api.php/provide/vod/',
+        name: '无尽资源'
+    },
+    uku: {
+        api: 'https://api.ukuapi.com/api.php/provide/vod/',
+        name: 'U酷资源'
+    },
+    aosika: {
+        api: 'https://aosikazy.com/api.php/provide/vod/',
+        name: '奥斯卡资源'
+    },
+    piaoling: {
+        api: 'https://p2100.net/api.php/provide/vod/',
+        name: '飘零资源'
+    },
+    subo: {
+        api: 'https://subocaiji.com/api.php/provide/vod/',
+        name: '速博资源'
+    },
+    modu: {
+        api: 'https://caiji.moduapi.cc/api.php/provide/vod/',
+        name: '魔都资源'
+    },
+    haohua: {
+        api: 'https://hhzyapi.com/api.php/provide/vod/',
+        name: '豪华资源'
+    },
+    suoni: {
+        api: 'https://suoniapi.com/api.php/provide/vod/',
+        name: '索尼资源'
+    },
+    yaya: {
+        api: 'https://cj.yayazy.net/api.php/provide/vod/',
+        name: '丫丫资源'
+    },
     testSource: {
         api: 'https://www.example.com/api.php/provide/vod',
         name: '空内容测试源',
