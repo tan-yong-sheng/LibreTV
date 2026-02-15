@@ -262,11 +262,26 @@ export async function onRequest(context) {
                  throw new Error(`HTTP error ${response.status}: ${response.statusText}. URL: ${targetUrl}. Body: ${errorBody.substring(0, 150)}`);
             }
 
-            // 读取响应内容为文本
-            const content = await response.text();
+            // 读取响应内容
             const contentType = response.headers.get('Content-Type') || '';
-            logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${content.length}`);
-            return { content, contentType, responseHeaders: response.headers }; // 同时返回原始响应头
+
+            // 检测是否是二进制内容（图片、视频等）
+            const isBinaryContent = contentType.startsWith('image/') ||
+                                    contentType.startsWith('video/') ||
+                                    contentType.startsWith('audio/') ||
+                                    contentType.startsWith('application/octet-stream');
+
+            let content;
+            if (isBinaryContent) {
+                // 二进制内容使用 arrayBuffer
+                content = await response.arrayBuffer();
+                logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 二进制内容长度: ${content.byteLength}`);
+            } else {
+                // 文本内容使用 text
+                content = await response.text();
+                logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${content.length}`);
+            }
+            return { content, contentType, responseHeaders: response.headers, isBinary: isBinaryContent };
 
         } catch (error) {
              logDebug(`请求彻底失败: ${targetUrl}: ${error.message}`);
@@ -532,10 +547,11 @@ export async function onRequest(context) {
         }
 
         // --- 实际请求 ---
-        const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl);
+        const { content, contentType, responseHeaders, isBinary } = await fetchContentWithType(targetUrl);
 
         // --- 写入缓存 (KV) ---
-        if (kvNamespace) {
+        // 注意：二进制内容不缓存到KV，因为无法JSON.stringify ArrayBuffer
+        if (kvNamespace && !isBinary) {
              try {
                  const headersToCache = {};
                  responseHeaders.forEach((value, key) => { headersToCache[key.toLowerCase()] = value; });
@@ -550,7 +566,7 @@ export async function onRequest(context) {
         }
 
         // --- 处理响应 ---
-        if (isM3u8Content(content, contentType)) {
+        if (!isBinary && isM3u8Content(content, contentType)) {
             logDebug(`内容是 M3U8，开始处理: ${targetUrl}`);
             const processedM3u8 = await processM3u8Content(targetUrl, content, 0, env);
             return createM3u8Response(processedM3u8);
