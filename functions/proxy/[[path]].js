@@ -248,13 +248,23 @@ export async function onRequest(context) {
 
     // 获取远程内容及其类型
     async function fetchContentWithType(targetUrl) {
+        // 检测是否是豆瓣图片请求，需要特殊处理 Referer
+        const isDoubanImage = targetUrl.match(/img\d*\.doubanio\.com/i);
+
+        // 设置 Referer：豆瓣图片必须使用豆瓣的 Referer 才能通过防盗链验证
+        let referer = request.headers.get('Referer') || new URL(targetUrl).origin;
+        if (isDoubanImage) {
+            referer = 'https://www.douban.com';
+            logDebug(`检测到豆瓣图片请求，强制使用 Referer: ${referer}`);
+        }
+
         const headers = new Headers({
             'User-Agent': getRandomUserAgent(),
             'Accept': '*/*',
             // 尝试传递一些原始请求的头信息
             'Accept-Language': request.headers.get('Accept-Language') || 'zh-CN,zh;q=0.9,en;q=0.8',
-            // 尝试设置 Referer 为目标网站的域名，或者传递原始 Referer
-            'Referer': request.headers.get('Referer') || new URL(targetUrl).origin
+            // 设置 Referer（豆瓣图片使用特殊处理）
+            'Referer': referer
         });
 
         try {
