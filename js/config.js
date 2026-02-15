@@ -107,12 +107,16 @@ const API_SITES = {
         name: '旺旺短剧'
     },
     ikun: {
-        api: 'https://ikunzyapi.com/api.php/provide/vod',
+        api: 'https://ikunzyapi.com/api.php/provide/vod/from/ikm3u8/',
         name: 'iKun资源'
     },
     lzi: {
         api: 'https://cj.lziapi.com/api.php/provide/vod/',
         name: '量子资源站'
+    },
+    fantuan: {
+        api: 'https://www.fantuan.tv/api.php/provide/vod/',
+        name: '饭团影视'
     },
     testSource: {
         api: 'https://www.example.com/api.php/provide/vod',
