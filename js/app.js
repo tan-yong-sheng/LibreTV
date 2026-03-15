@@ -656,14 +656,58 @@ async function search() {
             }
         });
 
-        // 对搜索结果进行排序：按名称优先，名称相同时按接口源排序
+        // 对搜索结果进行排序：优先匹配度，其次按用户选中源顺序与名称排序
+        const queryRaw = query.trim();
+        const queryNormalized = normalizeSearchText(queryRaw);
+        const sourceOrder = new Map();
+        selectedAPIs.forEach((apiId, index) => sourceOrder.set(apiId, index));
+        const sortCache = new Map();
+
+        function toHalfWidth(text) {
+            return text
+                .replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+                .replace(/\u3000/g, ' ');
+        }
+
+        function normalizeSearchText(text) {
+            return toHalfWidth(String(text))
+                .toLowerCase()
+                .replace(/[\s\-_.·~!@#$%^&*()+=\[\]{}|\\:;"'<>,.?\u002F`！￥…（）—【】、；：‘’“”，。《》？]/g, '');
+        }
+
+        function getMatchTier(rawTitle, normalizedTitle) {
+            if (normalizedTitle === queryNormalized) return 1;
+            if (rawTitle === queryRaw) return 2;
+            if (normalizedTitle.startsWith(queryNormalized)) return 3;
+            if (normalizedTitle.includes(queryNormalized)) return 4;
+            return 5;
+        }
+
+        function getSortKey(item) {
+            if (sortCache.has(item)) return sortCache.get(item);
+            const rawTitle = (item.vod_name || '').trim();
+            const normalizedTitle = normalizeSearchText(rawTitle);
+            const tier = getMatchTier(rawTitle, normalizedTitle);
+            const titleLength = normalizedTitle.length || rawTitle.length || 0;
+            const order = sourceOrder.has(item.source_code) ? sourceOrder.get(item.source_code) : Number.POSITIVE_INFINITY;
+
+            const key = { tier, titleLength, order, normalizedTitle, rawTitle };
+            sortCache.set(item, key);
+            return key;
+        }
+
         allResults.sort((a, b) => {
-            // 首先按照视频名称排序
-            const nameCompare = (a.vod_name || '').localeCompare(b.vod_name || '');
-            if (nameCompare !== 0) return nameCompare;
-            
-            // 如果名称相同，则按照来源排序
-            return (a.source_name || '').localeCompare(b.source_name || '');
+            const keyA = getSortKey(a);
+            const keyB = getSortKey(b);
+
+            if (keyA.tier !== keyB.tier) return keyA.tier - keyB.tier;
+            if (keyA.titleLength !== keyB.titleLength) return keyA.titleLength - keyB.titleLength;
+            if (keyA.order !== keyB.order) return keyA.order - keyB.order;
+
+            const sourceCompare = (a.source_name || '').localeCompare(b.source_name || '');
+            if (sourceCompare !== 0) return sourceCompare;
+
+            return (a.vod_name || '').localeCompare(b.vod_name || '');
         });
 
         // 更新搜索结果计数

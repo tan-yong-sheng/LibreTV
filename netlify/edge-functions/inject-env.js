@@ -1,13 +1,5 @@
 // Netlify Edge Function to inject environment variables into HTML
 export default async (request, context) => {
-  const url = new URL(request.url);
-  
-  // Only process HTML pages
-  const isHtmlPage = url.pathname.endsWith('.html') || url.pathname === '/';
-  if (!isHtmlPage) {
-    return; // Let the request pass through unchanged
-  }
-
   // Get the original response
   const response = await context.next();
   
