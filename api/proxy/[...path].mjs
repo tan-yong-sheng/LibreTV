@@ -136,7 +136,21 @@ function getRandomUserAgent() {
     return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+function isBinaryContentType(contentType) {
+    return contentType.startsWith('image/') ||
+        contentType.startsWith('video/') ||
+        contentType.startsWith('audio/') ||
+        contentType.startsWith('application/octet-stream');
+}
+
+function isImageRequestUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    return url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?|$)/i) ||
+        url.match(/img\d*\.doubanio\.com/i);
+}
+
 async function fetchContentWithType(targetUrl, requestHeaders) {
+    const isDoubanImage = targetUrl.match(/img\d*\.doubanio\.com/i);
     // 准备请求头
     const headers = {
         'User-Agent': getRandomUserAgent(),
@@ -145,6 +159,9 @@ async function fetchContentWithType(targetUrl, requestHeaders) {
         // 尝试设置一个合理的 Referer
         'Referer': requestHeaders['referer'] || new URL(targetUrl).origin,
     };
+    if (isDoubanImage) {
+        headers['Referer'] = 'https://www.douban.com';
+    }
     // 清理空值的头
     Object.keys(headers).forEach(key => headers[key] === undefined || headers[key] === null || headers[key] === '' ? delete headers[key] : {});
 
@@ -165,11 +182,12 @@ async function fetchContentWithType(targetUrl, requestHeaders) {
         }
 
         // 读取响应内容
-        const content = await response.text();
         const contentType = response.headers.get('content-type') || '';
-        logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${content.length}`);
+        const isBinary = isBinaryContentType(contentType) || isImageRequestUrl(targetUrl);
+        const content = isBinary ? await response.arrayBuffer() : await response.text();
+        logDebug(`请求成功: ${targetUrl}, Content-Type: ${contentType}, 内容长度: ${isBinary ? content.byteLength : content.length}`);
         // 返回结果
-        return { content, contentType, responseHeaders: response.headers };
+        return { content, contentType, responseHeaders: response.headers, isBinary };
 
     } catch (error) {
         // 捕获 fetch 本身的错误（网络、超时等）或上面抛出的 HTTP 错误
@@ -360,17 +378,6 @@ export default async function handler(req, res) {
 
     try { // ---- 开始主处理逻辑的 try 块 ----
 
-        // --- 验证鉴权 ---
-        const isAuthorized = await validateAuth(req);
-        if (!isAuthorized) {
-            console.warn('代理请求鉴权失败');
-            res.status(401).json({
-                success: false,
-                error: '代理访问未授权：请检查密码配置或鉴权参数'
-            });
-            return;
-        }
-
         // --- 提取目标 URL (主要依赖 req.query["...path"]) ---
         // Vercel 将 :path* 捕获的内容（可能包含斜杠）放入 req.query["...path"] 数组
         const pathData = req.query["...path"]; // 使用正确的键名
@@ -410,13 +417,27 @@ export default async function handler(req, res) {
             throw new Error(`无效的代理请求路径。无法从组合路径 "${encodedUrlPath}" 中提取有效的目标 URL。`);
         }
 
+        const isImageRequest = isImageRequestUrl(targetUrl);
+        // --- 验证鉴权（图片请求跳过） ---
+        if (!isImageRequest) {
+            const isAuthorized = await validateAuth(req);
+            if (!isAuthorized) {
+                console.warn('代理请求鉴权失败');
+                res.status(401).json({
+                    success: false,
+                    error: '代理访问未授权：请检查密码配置或鉴权参数'
+                });
+                return;
+            }
+        }
+
         console.info(`开始处理目标 URL 的代理请求: ${targetUrl}`);
 
         // --- 获取并处理目标内容 ---
-        const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl, req.headers);
+        const { content, contentType, responseHeaders, isBinary } = await fetchContentWithType(targetUrl, req.headers);
 
         // --- 如果是 M3U8，处理并返回 ---
-        if (isM3u8Content(content, contentType)) {
+        if (!isBinary && isM3u8Content(content, contentType)) {
             console.info(`正在处理 M3U8 内容: ${targetUrl}`);
             const processedM3u8 = await processM3u8Content(targetUrl, content);
 
@@ -446,8 +467,12 @@ export default async function handler(req, res) {
             // 设置我们自己的缓存策略
             res.setHeader('Cache-Control', `public, max-age=${CACHE_TTL}`);
 
-            // 发送原始（已解压）内容
-            res.status(200).send(content);
+            // 发送原始内容
+            if (isBinary) {
+                res.status(200).send(Buffer.from(content));
+            } else {
+                res.status(200).send(content);
+            }
         }
 
     // ---- 结束主处理逻辑的 try 块 ----

@@ -87,6 +87,19 @@ function rewriteUrlToProxy(targetUrl) {
 
 function getRandomUserAgent() { return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]; }
 
+function isBinaryContentType(contentType) {
+    return contentType.startsWith('image/') ||
+        contentType.startsWith('video/') ||
+        contentType.startsWith('audio/') ||
+        contentType.startsWith('application/octet-stream');
+}
+
+function isImageRequestUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    return url.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?|$)/i) ||
+        url.match(/img\d*\.doubanio\.com/i);
+}
+
 /**
  * 验证代理请求的鉴权
  */
@@ -124,12 +137,16 @@ function validateAuth(event) {
 }
 
 async function fetchContentWithType(targetUrl, requestHeaders) {
+    const isDoubanImage = targetUrl.match(/img\d*\.doubanio\.com/i);
     const headers = {
         'User-Agent': getRandomUserAgent(),
         'Accept': requestHeaders['accept'] || '*/*',
         'Accept-Language': requestHeaders['accept-language'] || 'zh-CN,zh;q=0.9,en;q=0.8',
         'Referer': requestHeaders['referer'] || new URL(targetUrl).origin,
     };
+    if (isDoubanImage) {
+        headers['Referer'] = 'https://www.douban.com';
+    }
     Object.keys(headers).forEach(key => headers[key] === undefined || headers[key] === null || headers[key] === '' ? delete headers[key] : {});
     logDebug(`Fetching target: ${targetUrl} with headers: ${JSON.stringify(headers)}`);
     try {
@@ -140,10 +157,11 @@ async function fetchContentWithType(targetUrl, requestHeaders) {
             const err = new Error(`HTTP error ${response.status}: ${response.statusText}. URL: ${targetUrl}. Body: ${errorBody.substring(0, 200)}`);
             err.status = response.status; throw err;
         }
-        const content = await response.text();
         const contentType = response.headers.get('content-type') || '';
-        logDebug(`Fetch success: ${targetUrl}, Content-Type: ${contentType}, Length: ${content.length}`);
-        return { content, contentType, responseHeaders: response.headers };
+        const isBinary = isBinaryContentType(contentType) || isImageRequestUrl(targetUrl);
+        const content = isBinary ? await response.arrayBuffer() : await response.text();
+        logDebug(`Fetch success: ${targetUrl}, Content-Type: ${contentType}, Length: ${isBinary ? content.byteLength : content.length}`);
+        return { content, contentType, responseHeaders: response.headers, isBinary };
     } catch (error) {
         logDebug(`Fetch exception for ${targetUrl}: ${error.message}`);
         throw new Error(`Failed to fetch target URL ${targetUrl}: ${error.message}`);
@@ -215,19 +233,6 @@ export const handler = async (event, context) => {
         };
     }
 
-    // --- 验证鉴权 ---
-    if (!validateAuth(event)) {
-        console.warn('Netlify 代理请求鉴权失败');
-        return {
-            statusCode: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                success: false,
-                error: '代理访问未授权：请检查密码配置或鉴权参数'
-            }),
-        };
-    }
-
     // --- Extract Target URL ---
     // Based on netlify.toml rewrite: from = "/proxy/*" to = "/.netlify/functions/proxy/:splat"
     // The :splat part should be available in event.path after the base path
@@ -257,24 +262,27 @@ export const handler = async (event, context) => {
         };
     }
 
+    const isImageRequest = isImageRequestUrl(targetUrl);
+    if (!isImageRequest && !validateAuth(event)) {
+        console.warn('Netlify 代理请求鉴权失败');
+        return {
+            statusCode: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                success: false,
+                error: '代理访问未授权：请检查密码配置或鉴权参数'
+            }),
+        };
+    }
+
     logDebug(`Processing proxy request for target: ${targetUrl}`);
 
     try {
-        // 验证鉴权
-        const isValidAuth = validateAuth(event);
-        if (!isValidAuth) {
-            return {
-                statusCode: 403,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ success: false, error: "Forbidden: Invalid auth credentials." }),
-            };
-        }
-
         // Fetch Original Content (Pass Netlify event headers)
-        const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl, event.headers);
+        const { content, contentType, responseHeaders, isBinary } = await fetchContentWithType(targetUrl, event.headers);
 
         // --- Process if M3U8 ---
-        if (isM3u8Content(content, contentType)) {
+        if (!isBinary && isM3u8Content(content, contentType)) {
             logDebug(`Processing M3U8 content: ${targetUrl}`);
             const processedM3u8 = await processM3u8Content(targetUrl, content);
 
@@ -307,11 +315,18 @@ export const handler = async (event, context) => {
              });
             netlifyHeaders['Cache-Control'] = `public, max-age=${CACHE_TTL}`; // Set our cache policy
 
+            if (isBinary) {
+                return {
+                    statusCode: 200,
+                    headers: netlifyHeaders,
+                    body: Buffer.from(content).toString('base64'),
+                    isBase64Encoded: true,
+                };
+            }
             return {
                 statusCode: 200,
                 headers: netlifyHeaders,
                 body: content, // Body as string
-                // isBase64Encoded: false, // Set true only if returning binary data as base64
             };
         }
 
