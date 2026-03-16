@@ -23,7 +23,6 @@ LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftan-yong-sheng%2FLibreTV&project-name=libretv&repository-name=libretv&env=PASSWORD&envDescription=Set%20a%20PASSWORD%20to%20protect%20the%20site&envLink=https%3A%2F%2Fgithub.com%2Ftan-yong-sheng%2FLibreTV%2Fblob%2Fmain%2F.env.example)  
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/tan-yong-sheng/LibreTV)  
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/tan-yong-sheng/LibreTV)
 
 ## 🚨 重要声明
 
