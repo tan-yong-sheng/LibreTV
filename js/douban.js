@@ -499,20 +499,12 @@ async function fetchDoubanData(url) {
     }
 }
 
-// 豆瓣封面加载失败时，尝试使用代理（带鉴权）
-async function handleDoubanImageError(imgEl, originalCoverUrl) {
-    try {
-        if (!imgEl || !originalCoverUrl) return;
-        imgEl.onerror = null;
-        imgEl.classList.add('object-contain');
-        const baseProxyUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
-        const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ?
-            await window.ProxyAuth.addAuthToProxyUrl(baseProxyUrl) :
-            baseProxyUrl;
-        imgEl.src = proxiedUrl;
-    } catch (error) {
-        console.error('豆瓣封面代理加载失败：', error);
-    }
+// 豆瓣封面加载失败时，使用本地占位图，避免重复错误请求
+function handleDoubanImageError(imgEl) {
+    if (!imgEl) return;
+    imgEl.onerror = null;
+    imgEl.classList.add('object-contain');
+    imgEl.src = 'image/logo.png';
 }
 window.handleDoubanImageError = handleDoubanImageError;
 
@@ -548,13 +540,15 @@ function renderDoubanCards(data, container) {
             // 处理图片URL
             // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
             const originalCoverUrl = item.cover;
+            // 直接使用代理加载豆瓣图片，避免 418 防盗链
+            const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
             
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
+                    <img src="${proxiedCoverUrl}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="window.handleDoubanImageError && window.handleDoubanImageError(this, '${originalCoverUrl}')"
+                        onerror="window.handleDoubanImageError && window.handleDoubanImageError(this)"
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
