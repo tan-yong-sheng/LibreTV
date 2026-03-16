@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       ? crypto.createHash('sha256').update(password).digest('hex')
       : '';
 
-    html = html.replace('{{PASSWORD}}', passwordHash);
+    html = html.replaceAll('{{PASSWORD}}', passwordHash);
 
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-store');
