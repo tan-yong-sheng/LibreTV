@@ -378,12 +378,20 @@ export default async function handler(req, res) {
 
     try { // ---- 开始主处理逻辑的 try 块 ----
 
-        // --- 提取目标 URL (主要依赖 req.query["...path"]) ---
-        // Vercel 将 :path* 捕获的内容（可能包含斜杠）放入 req.query["...path"] 数组
-        const pathData = req.query["...path"]; // 使用正确的键名
+        // --- 提取目标 URL (优先使用 query 参数 target，其次使用 req.query["...path"]) ---
+        // 通过 vercel.json 重写时会将 :path* 放入 target 查询参数
+        const targetParam = req.query.target;
+        const pathData = req.query["...path"]; // Vercel 将 :path* 捕获的内容放入此数组
         let encodedUrlPath = '';
 
-        if (pathData) {
+        if (targetParam) {
+            if (Array.isArray(targetParam)) {
+                encodedUrlPath = targetParam.join('/');
+            } else if (typeof targetParam === 'string') {
+                encodedUrlPath = targetParam;
+            }
+            console.info(`从 req.query.target 获取的编码路径: ${encodedUrlPath}`);
+        } else if (pathData) {
             if (Array.isArray(pathData)) {
                 encodedUrlPath = pathData.join('/'); // 重新组合
                 console.info(`从 req.query["...path"] (数组) 组合的编码路径: ${encodedUrlPath}`);
@@ -394,7 +402,7 @@ export default async function handler(req, res) {
                 console.warn(`[代理警告] req.query["...path"] 类型未知: ${typeof pathData}`);
             }
         } else {
-            console.warn(`[代理警告] req.query["...path"] 为空或未定义。`);
+            console.warn(`[代理警告] req.query.target 和 req.query["...path"] 均为空或未定义。`);
             // 备选：尝试从 req.url 提取（如果需要）
             if (req.url && req.url.startsWith('/proxy/')) {
                 encodedUrlPath = req.url.substring('/proxy/'.length);

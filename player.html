@@ -21,6 +21,18 @@
     <meta http-equiv="Expires" content="0">
 </head>
 <body>
+    <!-- 环境变量注入脚本（需在其他脚本前执行） -->
+    <script>
+        // 创建全局环境变量对象
+        window.__ENV__ = window.__ENV__ || {};
+        
+        // 注入服务器端环境变量 (将由服务器端替换)
+        // PASSWORD 变量将在这里被服务器端注入
+        const injectedPassword = "{{PASSWORD}}";
+        if (typeof injectedPassword === 'string' && /^[a-f0-9]{64}$/i.test(injectedPassword)) {
+            window.__ENV__.PASSWORD = injectedPassword;
+        }
+    </script>
     <header class="player-header-fixed p-4 flex items-center border-b border-[#333] gap-2">
         <div class="flex items-center min-w-0">
             <button id="homeButton" type="button" class="flex items-center min-w-0 cursor-pointer home-button">
@@ -236,13 +248,6 @@
     <script src="js/player.js"></script>
 
     <script>
-        // 创建全局环境变量对象
-        window.__ENV__ = window.__ENV__ || {};
-        
-        // 注入服务器端环境变量 (将由服务器端替换)
-        // PASSWORD 变量将在这里被服务器端注入
-        window.__ENV__.PASSWORD = "{{PASSWORD}}";
-
         // 修复 home 跳转
         document.addEventListener('DOMContentLoaded', function() {
             // 使用事件委托处理首页按钮点击

@@ -1,4 +1,6 @@
 # Logs
+.playwright
+.playwright-cli
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -26,3 +28,5 @@ coverage
 
 # Local Netlify folder
 .netlify
+
+.vercel

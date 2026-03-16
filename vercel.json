@@ -1,24 +1,14 @@
 {
-  "rewrites": [
-    {
-      "source": "/proxy/:path*",
-      "destination": "/api/proxy/:path*"
-    },
-    {
-      "source": "/s=:query",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/player.html",
-      "destination": "/player.html"
-    },
-    {
-      "source": "/player.html/:path*",
-      "destination": "/player.html"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/:path*"
-    }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "routes": [
+    { "src": "/", "dest": "/api/index" },
+    { "src": "/index.html", "dest": "/api/index" },
+    { "src": "/s=(.*)", "dest": "/api/index" },
+    { "src": "/player.html", "dest": "/api/player" },
+    { "src": "/player.html/(.*)", "dest": "/api/player" },
+    { "src": "/proxy/(.*)", "dest": "/api/proxy?target=$1" },
+    { "src": "/api/proxy/(.*)", "dest": "/api/proxy?target=$1" },
+    { "handle": "filesystem" }
   ]
 }

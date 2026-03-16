@@ -18,6 +18,18 @@
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body class="page-bg text-white">
+    <!-- 环境变量注入脚本（需在其他脚本前执行） -->
+    <script>
+        // 创建全局环境变量对象
+        window.__ENV__ = window.__ENV__ || {};
+        
+        // 注入服务器端环境变量 (将由服务器端替换)
+        // PASSWORD 变量将在这里被服务器端注入
+        const injectedPassword = "{{PASSWORD}}";
+        if (typeof injectedPassword === 'string' && /^[a-f0-9]{64}$/i.test(injectedPassword)) {
+            window.__ENV__.PASSWORD = injectedPassword;
+        }
+    </script>
     <!-- 将历史记录按钮移到左上角，并缩小尺寸 -->
     <div class="fixed top-4 left-4 z-10">
         <button onclick="toggleHistory(event)" class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 transition-colors" aria-label="观看历史">
@@ -425,16 +437,6 @@
 
     <!-- PWA 注册 -->
     <script src="js/pwa-register.js"></script>
-
-    <!-- 环境变量注入脚本 -->
-    <script>
-        // 创建全局环境变量对象
-        window.__ENV__ = window.__ENV__ || {};
-        
-        // 注入服务器端环境变量 (将由服务器端替换)
-        // PASSWORD 变量将在这里被服务器端注入
-        window.__ENV__.PASSWORD = "{{PASSWORD}}";
-    </script>
 
     <!-- 版本检测脚本 -->
     <script src="js/version-check.js"></script>
